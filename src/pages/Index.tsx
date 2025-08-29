@@ -1,14 +1,62 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react"
+import SplashScreen from "@/components/SplashScreen"
+import Dashboard from "@/components/Dashboard"
+import ComplaintRegistration from "@/components/ComplaintRegistration"
+import ComplaintTracking from "@/components/ComplaintTracking"
+import HelplineNumbers from "@/components/HelplineNumbers"
+import AdminPortal from "@/components/AdminPortal"
 
 const Index = () => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
-  );
-};
+  const [currentScreen, setCurrentScreen] = useState<string>('splash')
 
-export default Index;
+  const handleNavigation = (screen: string) => {
+    setCurrentScreen(screen)
+  }
+
+  const handleBack = () => {
+    if (currentScreen === 'complaint' || currentScreen === 'tracking' || currentScreen === 'helpline') {
+      setCurrentScreen('dashboard')
+    } else {
+      setCurrentScreen('splash')
+    }
+  }
+
+  const renderScreen = () => {
+    switch (currentScreen) {
+      case 'splash':
+        return <SplashScreen onNavigate={handleNavigation} />
+      
+      case 'login':
+      case 'signup':
+        // For now, simulate successful login and go to dashboard
+        setTimeout(() => setCurrentScreen('dashboard'), 100)
+        return <SplashScreen onNavigate={handleNavigation} />
+      
+      case 'dashboard':
+        return <Dashboard onBack={handleBack} onNavigate={handleNavigation} />
+      
+      case 'complaint':
+        return <ComplaintRegistration onBack={handleBack} />
+      
+      case 'tracking':
+        return <ComplaintTracking onBack={handleBack} />
+      
+      case 'helpline':
+        return <HelplineNumbers onBack={handleBack} />
+      
+      case 'admin':
+        return <AdminPortal onBack={handleBack} />
+      
+      default:
+        return <SplashScreen onNavigate={handleNavigation} />
+    }
+  }
+
+  return (
+    <div className="min-h-screen">
+      {renderScreen()}
+    </div>
+  )
+}
+
+export default Index
