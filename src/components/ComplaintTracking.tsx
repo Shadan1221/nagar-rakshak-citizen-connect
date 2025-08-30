@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ArrowLeft, Search, Clock, CheckCircle, User, MapPin } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { supabase } from "@/integrations/supabase/client"
 
 interface ComplaintTrackingProps {
   onBack: () => void
@@ -13,23 +15,88 @@ interface ComplaintTrackingProps {
 const ComplaintTracking = ({ onBack }: ComplaintTrackingProps) => {
   const [searchId, setSearchId] = useState("")
   const [complaint, setComplaint] = useState<any>(null)
+  const [statusUpdates, setStatusUpdates] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const { toast } = useToast()
 
-  const handleSearch = () => {
-    // Mock complaint data
-    setComplaint({
-      id: "NGR123456",
-      type: "Street Light Issue",
-      description: "Street light not working in Sector 5, near park",
-      status: "In Progress",
-      timeline: [
-        { status: "Registered", timestamp: "2024-01-15 10:30 AM", completed: true },
-        { status: "Assigned", timestamp: "2024-01-15 02:15 PM", completed: true, authority: "Municipal Corporation", contact: "+91-11-23456789" },
-        { status: "In Progress", timestamp: "2024-01-16 09:00 AM", completed: true },
-        { status: "Resolved", timestamp: "", completed: false }
-      ],
-      location: "Sector 5, Dwarka, New Delhi",
-      authority: "Delhi Municipal Corporation",
-      contact: "+91-11-23456789"
+  const handleSearch = async () => {
+    if (!searchId.trim()) {
+      toast({
+        title: "Please enter a complaint ID",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setLoading(true)
+    
+    try {
+      // Search for complaint by complaint_code
+      const { data: complaintData, error: complaintError } = await supabase
+        .from('complaints')
+        .select('*')
+        .eq('complaint_code', searchId.toUpperCase())
+        .single()
+
+      if (complaintError || !complaintData) {
+        toast({
+          title: "Complaint Not Found",
+          description: "Please check the complaint ID and try again",
+          variant: "destructive"
+        })
+        setLoading(false)
+        return
+      }
+
+      // Fetch status updates
+      const { data: updatesData, error: updatesError } = await supabase
+        .from('complaint_status_updates')
+        .select('*')
+        .eq('complaint_id', complaintData.id)
+        .order('created_at', { ascending: true })
+
+      if (updatesError) throw updatesError
+
+      setComplaint(complaintData)
+      setStatusUpdates(updatesData || [])
+      setLoading(false)
+      
+      toast({
+        title: "Complaint Found",
+        description: `Status: ${complaintData.status}`,
+        variant: "default"
+      })
+    } catch (error) {
+      console.error('Error fetching complaint:', error)
+      toast({
+        title: "Error",
+        description: "Failed to fetch complaint details",
+        variant: "destructive"
+      })
+      setLoading(false)
+    }
+  }
+
+  const generateTimeline = () => {
+    if (!complaint) return []
+    
+    const statuses = ['Registered', 'Assigned', 'In-Progress', 'Resolved']
+    const currentStatusIndex = statuses.indexOf(complaint.status)
+    
+    return statuses.map((status, index) => {
+      const statusUpdate = statusUpdates.find(update => update.status === status)
+      const isCompleted = index <= currentStatusIndex
+      
+      return {
+        status,
+        timestamp: statusUpdate 
+          ? new Date(statusUpdate.created_at).toLocaleString() 
+          : (isCompleted ? 'Processing...' : ''),
+        completed: isCompleted,
+        authority: statusUpdate?.assigned_to,
+        contact: statusUpdate?.assigned_contact,
+        note: statusUpdate?.note
+      }
     })
   }
 
@@ -78,9 +145,10 @@ const ComplaintTracking = ({ onBack }: ComplaintTrackingProps) => {
               variant="default" 
               className="w-full bg-civic-green hover:bg-civic-green/90"
               onClick={handleSearch}
+              disabled={loading}
             >
               <Search className="h-4 w-4 mr-2" />
-              Track Status
+              {loading ? "Searching..." : "Track Status"}
             </Button>
           </CardContent>
         </Card>
@@ -92,7 +160,7 @@ const ComplaintTracking = ({ onBack }: ComplaintTrackingProps) => {
             <Card className="border-civic-saffron/20">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  <span>{complaint.type}</span>
+                  <span>{complaint.issue_type}</span>
                   <Badge className={getStatusColor(complaint.status)}>
                     {complaint.status}
                   </Badge>
@@ -101,11 +169,23 @@ const ComplaintTracking = ({ onBack }: ComplaintTrackingProps) => {
               <CardContent className="space-y-3">
                 <div className="flex items-start gap-2">
                   <MapPin className="h-4 w-4 text-civic-saffron mt-1" />
-                  <p className="text-sm">{complaint.location}</p>
+                  <p className="text-sm">{complaint.city}, {complaint.state}</p>
                 </div>
                 <p className="text-sm text-muted-foreground">{complaint.description}</p>
+                {complaint.media_url && (
+                  <div className="mt-3">
+                    <img 
+                      src={complaint.media_url} 
+                      alt="Complaint evidence" 
+                      className="max-w-full h-auto rounded-lg border"
+                    />
+                  </div>
+                )}
                 <div className="bg-civic-saffron/5 rounded-lg p-3">
-                  <p className="text-sm font-medium">Complaint ID: {complaint.id}</p>
+                  <p className="text-sm font-medium">Complaint ID: {complaint.complaint_code}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Submitted: {new Date(complaint.created_at).toLocaleDateString()}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -120,12 +200,12 @@ const ComplaintTracking = ({ onBack }: ComplaintTrackingProps) => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {complaint.timeline.map((step: any, index: number) => (
+                  {generateTimeline().map((step: any, index: number) => (
                     <div key={index} className="flex items-start space-x-3">
                       <div className={`w-4 h-4 rounded-full mt-1 ${
                         step.completed 
                           ? 'bg-civic-green' 
-                          : index === complaint.timeline.findIndex((s: any) => !s.completed)
+                          : index === generateTimeline().findIndex((s: any) => !s.completed)
                             ? 'bg-civic-saffron animate-pulse'
                             : 'bg-muted'
                       }`} />
@@ -148,13 +228,21 @@ const ComplaintTracking = ({ onBack }: ComplaintTrackingProps) => {
                           </p>
                         )}
                         
+                        {step.note && (
+                          <p className="text-xs text-muted-foreground mb-2 italic">
+                            {step.note}
+                          </p>
+                        )}
+                        
                         {step.authority && (
                           <div className="bg-civic-blue/5 rounded p-2 text-xs">
                             <div className="flex items-center gap-1 mb-1">
                               <User className="h-3 w-3" />
                               <span className="font-medium">{step.authority}</span>
                             </div>
-                            <p className="text-muted-foreground">Contact: {step.contact}</p>
+                            {step.contact && (
+                              <p className="text-muted-foreground">Contact: {step.contact}</p>
+                            )}
                           </div>
                         )}
                       </div>
@@ -165,21 +253,26 @@ const ComplaintTracking = ({ onBack }: ComplaintTrackingProps) => {
             </Card>
 
             {/* Authority Contact */}
-            {complaint.status !== 'Resolved' && (
+            {complaint.status !== 'Resolved' && statusUpdates.find(update => update.assigned_to) && (
               <Card className="border-civic-blue/20 bg-civic-blue/5">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="font-medium">Assigned Authority</h4>
-                      <p className="text-sm text-muted-foreground">{complaint.authority}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {statusUpdates.find(update => update.assigned_to)?.assigned_to}
+                      </p>
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="border-civic-blue text-civic-blue hover:bg-civic-blue hover:text-white"
-                    >
-                      Call: {complaint.contact}
-                    </Button>
+                    {statusUpdates.find(update => update.assigned_contact) && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="border-civic-blue text-civic-blue hover:bg-civic-blue hover:text-white"
+                        onClick={() => window.open(`tel:${statusUpdates.find(update => update.assigned_contact)?.assigned_contact}`)}
+                      >
+                        Call: {statusUpdates.find(update => update.assigned_contact)?.assigned_contact}
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
