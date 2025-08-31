@@ -1,10 +1,10 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowLeft, Search, Clock, CheckCircle, User, MapPin } from "lucide-react"
+import { ArrowLeft, Search, Clock, CheckCircle, User, MapPin, Phone } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/integrations/supabase/client"
 
@@ -18,6 +18,31 @@ const ComplaintTracking = ({ onBack }: ComplaintTrackingProps) => {
   const [statusUpdates, setStatusUpdates] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
+
+  useEffect(() => {
+    if (complaint) {
+      // Set up real-time subscription for this complaint
+      const channel = supabase
+        .channel(`complaint-${complaint.id}`)
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'complaint_status_updates', filter: `complaint_id=eq.${complaint.id}` },
+          () => {
+            handleSearch() // Refresh complaint data
+          }
+        )
+        .on('postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'complaints', filter: `id=eq.${complaint.id}` },
+          () => {
+            handleSearch() // Refresh complaint data
+          }
+        )
+        .subscribe()
+
+      return () => {
+        supabase.removeChannel(channel)
+      }
+    }
+  }, [complaint?.id])
 
   const handleSearch = async () => {
     if (!searchId.trim()) {
@@ -241,7 +266,18 @@ const ComplaintTracking = ({ onBack }: ComplaintTrackingProps) => {
                               <span className="font-medium">{step.authority}</span>
                             </div>
                             {step.contact && (
-                              <p className="text-muted-foreground">Contact: {step.contact}</p>
+                              <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">Contact: {step.contact}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 text-xs"
+                                  onClick={() => window.open(`tel:${step.contact}`)}
+                                >
+                                  <Phone className="h-3 w-3 mr-1" />
+                                  Call
+                                </Button>
+                              </div>
                             )}
                           </div>
                         )}
