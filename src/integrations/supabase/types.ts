@@ -132,6 +132,66 @@ export type Database = {
           },
         ]
       }
+      otp_verifications: {
+        Row: {
+          created_at: string | null
+          expires_at: string
+          id: string
+          is_verified: boolean | null
+          otp_code: string
+          phone_number: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          is_verified?: boolean | null
+          otp_code: string
+          phone_number: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          is_verified?: boolean | null
+          otp_code?: string
+          phone_number?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          full_name: string | null
+          id: string
+          is_active: boolean | null
+          password_hash: string | null
+          phone_number: string | null
+          role: Database["public"]["Enums"]["user_role"] | null
+          updated_at: string | null
+          username: string | null
+        }
+        Insert: {
+          full_name?: string | null
+          id: string
+          is_active?: boolean | null
+          password_hash?: string | null
+          phone_number?: string | null
+          role?: Database["public"]["Enums"]["user_role"] | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Update: {
+          full_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          password_hash?: string | null
+          phone_number?: string | null
+          role?: Database["public"]["Enums"]["user_role"] | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           created_at: string | null
@@ -156,15 +216,59 @@ export type Database = {
         }
         Relationships: []
       }
+      workers: {
+        Row: {
+          created_at: string | null
+          department: string
+          id: string
+          status: Database["public"]["Enums"]["worker_status"] | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          department: string
+          id?: string
+          status?: Database["public"]["Enums"]["worker_status"] | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          department?: string
+          id?: string
+          status?: Database["public"]["Enums"]["worker_status"] | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      auto_assign_worker: {
+        Args: { issue_type_param: string }
+        Returns: string
+      }
+      generate_unique_username: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       complaint_status: "Registered" | "Assigned" | "In-Progress" | "Resolved"
+      user_role: "citizen" | "admin" | "worker"
+      worker_status: "available" | "busy" | "offline"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -293,6 +397,8 @@ export const Constants = {
   public: {
     Enums: {
       complaint_status: ["Registered", "Assigned", "In-Progress", "Resolved"],
+      user_role: ["citizen", "admin", "worker"],
+      worker_status: ["available", "busy", "offline"],
     },
   },
 } as const
