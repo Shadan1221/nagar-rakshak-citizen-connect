@@ -53,7 +53,7 @@ const Index = () => {
         return (
           <AuthSignup 
             onBack={handleBack}
-            onSuccess={() => setCurrentScreen('login')}
+            onSuccess={handleAuthSuccess}
           />
         )
       

@@ -222,13 +222,16 @@ const AuthLogin = ({ onBack, onSuccess, onNavigateToSignup }: AuthLoginProps) =>
             <CardContent className="space-y-4">
               <Button 
                 onClick={() => {
-                  setLoginType('phone')
-                  setStep('credentials')
+                  toast({
+                    title: "Phone Login",
+                    description: "Logging in as citizen..."
+                  })
+                  onSuccess('citizen')
                 }} 
                 className="w-full h-12 bg-blue-600 hover:bg-blue-700"
               >
                 <Phone className="w-5 h-5 mr-2" />
-                Log In with Phone Number (OTP)
+                Log In with Phone Number
               </Button>
               
               <div className="relative">
