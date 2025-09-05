@@ -84,7 +84,15 @@ const AuthLogin = ({ onBack, onSuccess, onNavigateToSignup }: AuthLoginProps) =>
 
     setLoading(true)
     try {
-      // Verify OTP
+      // Check for test account bypass
+      if (normalizedPhone === '1223334444' && otp === '123456') {
+        // Test account - direct login
+        toast({ title: "Test Account Login", description: "Welcome back, Test User!" })
+        onSuccess('citizen')
+        return
+      }
+
+      // Normal OTP verification
       const { data: otpData, error: otpError } = await supabase
         .from('otp_verifications')
         .select('*')
@@ -150,8 +158,22 @@ const AuthLogin = ({ onBack, onSuccess, onNavigateToSignup }: AuthLoginProps) =>
 
     setLoading(true)
     try {
-      // For simplicity, we'll use a basic comparison
-      // In production, you would use proper password hashing
+      // Check for admin login first
+      const { data: adminRole } = await supabase.rpc('login_admin', {
+        p_username: username,
+        p_password: password
+      })
+
+      if (adminRole) {
+        toast({
+          title: "Admin Login Successful",
+          description: "Welcome, Administrator!",
+        })
+        onSuccess(adminRole)
+        return
+      }
+
+      // Regular citizen login
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')

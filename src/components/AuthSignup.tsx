@@ -95,7 +95,20 @@ const AuthSignup = ({ onBack, onSuccess }: AuthSignupProps) => {
 
     setLoading(true)
     try {
-      // Verify OTP against normalized phone
+      // Check for test account bypass
+      if (normalizedPhone === '1223334444' && otp === '123456') {
+        // Test account - bypass OTP and directly log in
+        setGeneratedCredentials({ username: 'citizenUser01', password: 'password123' })
+        toast({
+          title: "Test Account Login",
+          description: "Using test account: citizenUser01 / password123",
+          duration: 15000
+        })
+        setStep('success')
+        return
+      }
+
+      // Normal OTP verification for real accounts
       const { data: otpData, error: otpError } = await supabase
         .from('otp_verifications')
         .select('*')
@@ -120,41 +133,23 @@ const AuthSignup = ({ onBack, onSuccess }: AuthSignupProps) => {
         .update({ is_verified: true })
         .eq('id', otpData.id)
 
-      // Generate unique credentials
-      const { data: usernameResult } = await supabase.rpc('generate_unique_username')
+      // Generate password
       const generatedPassword = Math.random().toString(36).slice(-8).toUpperCase()
 
-      // 1) Create record in public.users so FK on profiles.id is satisfied
-      const { data: userRow, error: userError } = await supabase
-        .from('users')
-        .insert({
-          username: usernameResult,
-          phone_number: normalizedPhone,
-          password: generatedPassword
-        })
-        .select('id')
-        .single()
+      // Use secure function to create account
+      const { data: accountData, error: accountError } = await supabase.rpc('create_citizen_account', {
+        p_phone: normalizedPhone,
+        p_password: generatedPassword
+      })
 
-      if (userError || !userRow) throw userError
+      if (accountError) throw accountError
 
-      // 2) Create profile referencing that user id
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: userRow.id,
-          phone_number: normalizedPhone,
-          username: usernameResult,
-          password_hash: generatedPassword, // TODO: hash in production
-          role: 'citizen'
-        })
-
-      if (profileError) throw profileError
-
-      setGeneratedCredentials({ username: usernameResult, password: generatedPassword })
+      const { username } = accountData[0]
+      setGeneratedCredentials({ username, password: generatedPassword })
 
       toast({
         title: "Account Created",
-        description: `Username: ${usernameResult}, Password: ${generatedPassword} (Demo mode)`,
+        description: `Username: ${username}, Password: ${generatedPassword} (Demo mode)`,
         duration: 15000
       })
 
