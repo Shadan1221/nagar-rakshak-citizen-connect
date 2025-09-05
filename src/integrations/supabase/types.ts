@@ -97,12 +97,15 @@ export type Database = {
           gps_longitude: number | null
           id: string
           issue_type: string | null
+          location: unknown | null
           media_url: string | null
+          priority: string | null
           severity_description: string | null
           state: string | null
           status: Database["public"]["Enums"]["complaint_status"] | null
           updated_at: string | null
           user_id: string | null
+          voice_note_url: string | null
         }
         Insert: {
           address_line1?: string | null
@@ -118,12 +121,15 @@ export type Database = {
           gps_longitude?: number | null
           id?: string
           issue_type?: string | null
+          location?: unknown | null
           media_url?: string | null
+          priority?: string | null
           severity_description?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["complaint_status"] | null
           updated_at?: string | null
           user_id?: string | null
+          voice_note_url?: string | null
         }
         Update: {
           address_line1?: string | null
@@ -139,12 +145,15 @@ export type Database = {
           gps_longitude?: number | null
           id?: string
           issue_type?: string | null
+          location?: unknown | null
           media_url?: string | null
+          priority?: string | null
           severity_description?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["complaint_status"] | null
           updated_at?: string | null
           user_id?: string | null
+          voice_note_url?: string | null
         }
         Relationships: [
           {
@@ -333,7 +342,12 @@ export type Database = {
       }
     }
     Enums: {
-      complaint_status: "Registered" | "Assigned" | "In-Progress" | "Resolved"
+      complaint_status:
+        | "Registered"
+        | "Assigned"
+        | "In-Progress"
+        | "Resolved"
+        | "Pending"
       user_role: "citizen" | "admin" | "worker"
       worker_status: "available" | "busy" | "offline"
     }
@@ -463,7 +477,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      complaint_status: ["Registered", "Assigned", "In-Progress", "Resolved"],
+      complaint_status: [
+        "Registered",
+        "Assigned",
+        "In-Progress",
+        "Resolved",
+        "Pending",
+      ],
       user_role: ["citizen", "admin", "worker"],
       worker_status: ["available", "busy", "offline"],
     },
