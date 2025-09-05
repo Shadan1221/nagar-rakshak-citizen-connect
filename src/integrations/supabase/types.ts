@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admins: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          password: string
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          password: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          password?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
       complaint_status_updates: {
         Row: {
           assigned_contact: string | null
@@ -72,6 +102,7 @@ export type Database = {
           state: string | null
           status: Database["public"]["Enums"]["complaint_status"] | null
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           address_line1?: string | null
@@ -92,6 +123,7 @@ export type Database = {
           state?: string | null
           status?: Database["public"]["Enums"]["complaint_status"] | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           address_line1?: string | null
@@ -112,8 +144,17 @@ export type Database = {
           state?: string | null
           status?: Database["public"]["Enums"]["complaint_status"] | null
           updated_at?: string | null
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "complaints_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       feedback: {
         Row: {
@@ -275,8 +316,19 @@ export type Database = {
         Args: { issue_type_param: string }
         Returns: string
       }
+      create_citizen_account: {
+        Args: { p_password: string; p_phone: string }
+        Returns: {
+          user_id: string
+          username: string
+        }[]
+      }
       generate_unique_username: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      login_admin: {
+        Args: { p_password: string; p_username: string }
         Returns: string
       }
     }
