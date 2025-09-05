@@ -26,7 +26,8 @@ const AuthLogin = ({ onBack, onSuccess, onNavigateToSignup }: AuthLoginProps) =>
   const { toast } = useToast()
 
   const handlePhoneLogin = async () => {
-    if (!phoneNumber.trim()) {
+    const normalizedPhone = phoneNumber.replace(/\D/g, '')
+    if (!normalizedPhone) {
       toast({
         title: "Error",
         description: "Please enter your phone number",
@@ -37,22 +38,20 @@ const AuthLogin = ({ onBack, onSuccess, onNavigateToSignup }: AuthLoginProps) =>
 
     setLoading(true)
     try {
-      // Generate and send OTP
+      // Generate and send OTP (store with normalized phone)
       const otpCode = Math.floor(100000 + Math.random() * 900000).toString()
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
 
       const { error } = await supabase
         .from('otp_verifications')
         .insert({
-          phone_number: phoneNumber,
+          phone_number: normalizedPhone,
           otp_code: otpCode,
           expires_at: expiresAt.toISOString()
         })
 
       if (error) throw error
 
-      // In production, you would send OTP via SMS service
-      // For demo purposes, we'll show it in a toast
       toast({
         title: "OTP Sent",
         description: `OTP: ${otpCode} (Demo mode - in production this would be sent via SMS)`,
@@ -73,6 +72,7 @@ const AuthLogin = ({ onBack, onSuccess, onNavigateToSignup }: AuthLoginProps) =>
   }
 
   const handleOtpVerification = async () => {
+    const normalizedPhone = phoneNumber.replace(/\D/g, '')
     if (!otp.trim()) {
       toast({
         title: "Error",
@@ -88,11 +88,11 @@ const AuthLogin = ({ onBack, onSuccess, onNavigateToSignup }: AuthLoginProps) =>
       const { data: otpData, error: otpError } = await supabase
         .from('otp_verifications')
         .select('*')
-        .eq('phone_number', phoneNumber)
+        .eq('phone_number', normalizedPhone)
         .eq('otp_code', otp)
         .gt('expires_at', new Date().toISOString())
         .eq('is_verified', false)
-        .single()
+        .maybeSingle()
 
       if (otpError || !otpData) {
         toast({
@@ -109,23 +109,20 @@ const AuthLogin = ({ onBack, onSuccess, onNavigateToSignup }: AuthLoginProps) =>
         .update({ is_verified: true })
         .eq('id', otpData.id)
 
-      // Check if user exists
+      // Check if user exists (normalized phone)
       const { data: profile } = await supabase
         .from('profiles')
         .select('*')
-        .eq('phone_number', phoneNumber)
-        .single()
+        .eq('phone_number', normalizedPhone)
+        .maybeSingle()
 
       if (profile) {
-        toast({
-          title: "Login Successful",
-          description: "Welcome back!",
-        })
+        toast({ title: "Login Successful", description: "Welcome back!" })
         onSuccess(profile.role)
       } else {
         toast({
-          title: "Error",
-          description: "No account found with this phone number. Please sign up first.",
+          title: "No Account Found",
+          description: "Please sign up first.",
           variant: "destructive"
         })
       }

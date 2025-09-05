@@ -21,7 +21,8 @@ const AuthSignup = ({ onBack, onSuccess }: AuthSignupProps) => {
   const { toast } = useToast()
 
   const handleSendOtp = async () => {
-    if (!phoneNumber.trim()) {
+    const normalizedPhone = phoneNumber.replace(/\D/g, '')
+    if (!normalizedPhone) {
       toast({
         title: "Error",
         description: "Please enter your phone number",
@@ -32,40 +33,39 @@ const AuthSignup = ({ onBack, onSuccess }: AuthSignupProps) => {
 
     setLoading(true)
     try {
-      // Check if user already exists
+      // Check if user already exists (using normalized phone)
       const { data: existingUser } = await supabase
         .from('profiles')
         .select('*')
-        .eq('phone_number', phoneNumber)
-        .single()
+        .eq('phone_number', normalizedPhone)
+        .maybeSingle()
 
       if (existingUser) {
         toast({
-          title: "Error",
-          description: "Account already exists with this phone number. Please login instead.",
+          title: "Account Exists",
+          description: "An account already exists with this phone number. Please log in instead.",
           variant: "destructive"
         })
         return
       }
 
-      // Generate and send OTP
+      // Generate and store OTP
       const otpCode = Math.floor(100000 + Math.random() * 900000).toString()
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
 
       const { error } = await supabase
         .from('otp_verifications')
         .insert({
-          phone_number: phoneNumber,
+          phone_number: normalizedPhone,
           otp_code: otpCode,
           expires_at: expiresAt.toISOString()
         })
 
       if (error) throw error
 
-      // In production, you would send OTP via SMS service
       toast({
         title: "OTP Sent",
-        description: `OTP: ${otpCode} (Demo mode - in production this would be sent via SMS)`,
+        description: `OTP: ${otpCode} (Demo mode - via SMS in production)`,
         duration: 10000
       })
 
@@ -83,6 +83,7 @@ const AuthSignup = ({ onBack, onSuccess }: AuthSignupProps) => {
   }
 
   const handleOtpVerification = async () => {
+    const normalizedPhone = phoneNumber.replace(/\D/g, '')
     if (!otp.trim()) {
       toast({
         title: "Error",
@@ -94,15 +95,15 @@ const AuthSignup = ({ onBack, onSuccess }: AuthSignupProps) => {
 
     setLoading(true)
     try {
-      // Verify OTP
+      // Verify OTP against normalized phone
       const { data: otpData, error: otpError } = await supabase
         .from('otp_verifications')
         .select('*')
-        .eq('phone_number', phoneNumber)
+        .eq('phone_number', normalizedPhone)
         .eq('otp_code', otp)
         .gt('expires_at', new Date().toISOString())
         .eq('is_verified', false)
-        .single()
+        .maybeSingle()
 
       if (otpError || !otpData) {
         toast({
@@ -119,35 +120,41 @@ const AuthSignup = ({ onBack, onSuccess }: AuthSignupProps) => {
         .update({ is_verified: true })
         .eq('id', otpData.id)
 
-      // Generate unique username and password
-      const { data: usernameResult } = await supabase
-        .rpc('generate_unique_username')
-
+      // Generate unique credentials
+      const { data: usernameResult } = await supabase.rpc('generate_unique_username')
       const generatedPassword = Math.random().toString(36).slice(-8).toUpperCase()
-      
-      // Create user profile with UUID
-      const profileId = crypto.randomUUID()
+
+      // 1) Create record in public.users so FK on profiles.id is satisfied
+      const { data: userRow, error: userError } = await supabase
+        .from('users')
+        .insert({
+          username: usernameResult,
+          phone_number: normalizedPhone,
+          password: generatedPassword
+        })
+        .select('id')
+        .single()
+
+      if (userError || !userRow) throw userError
+
+      // 2) Create profile referencing that user id
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
-          id: profileId,
-          phone_number: phoneNumber,
+          id: userRow.id,
+          phone_number: normalizedPhone,
           username: usernameResult,
-          password_hash: generatedPassword, // In production, hash this
+          password_hash: generatedPassword, // TODO: hash in production
           role: 'citizen'
         })
 
       if (profileError) throw profileError
 
-      setGeneratedCredentials({
-        username: usernameResult,
-        password: generatedPassword
-      })
+      setGeneratedCredentials({ username: usernameResult, password: generatedPassword })
 
-      // In production, send credentials via SMS
       toast({
         title: "Account Created",
-        description: `Username: ${usernameResult}, Password: ${generatedPassword} (Demo mode - in production this would be sent via SMS)`,
+        description: `Username: ${usernameResult}, Password: ${generatedPassword} (Demo mode)`,
         duration: 15000
       })
 
