@@ -54,6 +54,8 @@ export type Database = {
       }
       complaints: {
         Row: {
+          address_line1: string | null
+          address_line2: string | null
           assigned_to: string | null
           city: string | null
           complaint_code: string
@@ -61,14 +63,19 @@ export type Database = {
           description: string | null
           geo_lat: number | null
           geo_lng: number | null
+          gps_latitude: number | null
+          gps_longitude: number | null
           id: string
           issue_type: string | null
           media_url: string | null
+          severity_description: string | null
           state: string | null
           status: Database["public"]["Enums"]["complaint_status"] | null
           updated_at: string | null
         }
         Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
           assigned_to?: string | null
           city?: string | null
           complaint_code: string
@@ -76,14 +83,19 @@ export type Database = {
           description?: string | null
           geo_lat?: number | null
           geo_lng?: number | null
+          gps_latitude?: number | null
+          gps_longitude?: number | null
           id?: string
           issue_type?: string | null
           media_url?: string | null
+          severity_description?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["complaint_status"] | null
           updated_at?: string | null
         }
         Update: {
+          address_line1?: string | null
+          address_line2?: string | null
           assigned_to?: string | null
           city?: string | null
           complaint_code?: string
@@ -91,9 +103,12 @@ export type Database = {
           description?: string | null
           geo_lat?: number | null
           geo_lng?: number | null
+          gps_latitude?: number | null
+          gps_longitude?: number | null
           id?: string
           issue_type?: string | null
           media_url?: string | null
+          severity_description?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["complaint_status"] | null
           updated_at?: string | null
