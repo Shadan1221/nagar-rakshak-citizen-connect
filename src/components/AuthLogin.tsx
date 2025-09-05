@@ -180,6 +180,15 @@ const AuthLogin = ({ onBack, onSuccess, onNavigateToSignup }: AuthLoginProps) =>
         return
       }
 
+      if (!profile.is_active) {
+        toast({
+          title: "Account Inactive",
+          description: "Your account has been deactivated. Please contact support.",
+          variant: "destructive"
+        })
+        return
+      }
+
       toast({
         title: "Login Successful",
         description: "Welcome back!",

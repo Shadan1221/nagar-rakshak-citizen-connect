@@ -26,10 +26,14 @@ const ComplaintRegistration = ({ onBack }: ComplaintRegistrationProps) => {
     district: '',
     issueType: '',
     description: '',
-    media: null as File | null
+    media: null as File | null,
+    gpsLocation: null as { lat: number; lng: number } | null,
+    addressLine1: '',
+    addressLine2: ''
   })
 
   const [availableCities, setAvailableCities] = useState<string[]>([])
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
 
   const issueTypes = [
     { value: 'Electricity', label: '⚡ Electricity', category: 'Utilities' },
@@ -90,7 +94,12 @@ const ComplaintRegistration = ({ onBack }: ComplaintRegistrationProps) => {
           city: formData.city, 
           issue_type: formData.issueType,
           description: formData.description,
+          severity_description: formData.description, // AI-generated description stored here
           media_url: mediaUrl,
+          gps_latitude: formData.gpsLocation?.lat,
+          gps_longitude: formData.gpsLocation?.lng,
+          address_line1: formData.addressLine1,
+          address_line2: formData.addressLine2,
           status: assignedWorkerId ? 'In-Progress' : 'Registered',
           assigned_to: assignedWorkerId
         } as any)
@@ -128,15 +137,106 @@ const ComplaintRegistration = ({ onBack }: ComplaintRegistrationProps) => {
     }
   }
 
-  const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       setFormData(prev => ({ ...prev, media: file }))
+      
+      // Get GPS location
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setFormData(prev => ({
+              ...prev,
+              gpsLocation: {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+              }
+            }))
+            toast({
+              title: "Location Captured",
+              description: "GPS coordinates recorded",
+              variant: "default"
+            })
+          },
+          (error) => {
+            console.log('GPS error:', error)
+            toast({
+              title: "Location Access",
+              description: "Unable to capture GPS location",
+              variant: "destructive"
+            })
+          }
+        )
+      }
+
+      // Auto-analyze media with AI if it's an image
+      if (file.type.startsWith('image/')) {
+        await analyzeMediaWithAI(file)
+      }
+
       toast({
         title: "Media Uploaded",
         description: "Photo/video attached successfully",
         variant: "default"
       })
+    }
+  }
+
+  const analyzeMediaWithAI = async (file: File) => {
+    setIsAnalyzing(true)
+    try {
+      // Upload file to get URL for AI analysis
+      const fileExt = file.name.split('.').pop()
+      const fileName = `temp_${Date.now()}.${fileExt}`
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('complaints')
+        .upload(fileName, file)
+
+      if (uploadError) throw uploadError
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('complaints')
+        .getPublicUrl(fileName)
+
+      // Call AI analysis function
+      const { data: analysisResult, error: analysisError } = await supabase.functions.invoke('analyze-media', {
+        body: { 
+          mediaUrl: publicUrl,
+          issueType: formData.issueType 
+        }
+      })
+
+      if (analysisError) throw analysisError
+
+      if (analysisResult.success && analysisResult.description) {
+        setFormData(prev => ({ 
+          ...prev, 
+          description: analysisResult.description 
+        }))
+        
+        toast({
+          title: "AI Analysis Complete",
+          description: "Description auto-generated from image",
+          variant: "default"
+        })
+      }
+
+      // Clean up temp file
+      await supabase.storage
+        .from('complaints')
+        .remove([fileName])
+
+    } catch (error) {
+      console.error('AI analysis error:', error)
+      toast({
+        title: "AI Analysis Failed",
+        description: "Please enter description manually",
+        variant: "destructive"
+      })
+    } finally {
+      setIsAnalyzing(false)
     }
   }
 
@@ -189,7 +289,10 @@ const ComplaintRegistration = ({ onBack }: ComplaintRegistrationProps) => {
                       district: '',
                       issueType: '',
                       description: '',
-                      media: null
+                      media: null,
+                      gpsLocation: null,
+                      addressLine1: '',
+                      addressLine2: ''
                     })
                   }}
                 >
@@ -289,7 +392,7 @@ const ComplaintRegistration = ({ onBack }: ComplaintRegistrationProps) => {
               </Select>
             </div>
 
-            {/* Media Upload - Moved above description */}
+            {/* Media Upload - Enhanced with GPS and Address */}
             <div>
               <Label>Upload Photo/Video (Optional)</Label>
               <div className="border-2 border-dashed border-civic-saffron/30 rounded-lg p-4 text-center hover:border-civic-saffron/50 transition-colors">
@@ -305,20 +408,60 @@ const ComplaintRegistration = ({ onBack }: ComplaintRegistrationProps) => {
                   <p className="text-sm text-muted-foreground">
                     {formData.media ? formData.media.name : 'Tap to add photo or video'}
                   </p>
-                  <p className="text-xs text-civic-saffron mt-1">GPS location will be automatically captured</p>
+                  <p className="text-xs text-civic-saffron mt-1">
+                    GPS location and AI analysis will be automatically applied
+                  </p>
+                  {isAnalyzing && (
+                    <p className="text-xs text-blue-600 mt-1 font-medium">
+                      🤖 AI analyzing image...
+                    </p>
+                  )}
                 </label>
+              </div>
+
+              {/* GPS Location Display */}
+              {formData.gpsLocation && (
+                <div className="mt-2 p-2 bg-green-50 rounded text-xs">
+                  📍 GPS: {formData.gpsLocation.lat.toFixed(6)}, {formData.gpsLocation.lng.toFixed(6)}
+                </div>
+              )}
+
+              {/* Address Fields */}
+              <div className="mt-4 space-y-3">
+                <div>
+                  <Label htmlFor="address1">Address Line 1 (Optional)</Label>
+                  <Input 
+                    id="address1"
+                    placeholder="Street address, building name, etc."
+                    value={formData.addressLine1}
+                    onChange={(e) => setFormData(prev => ({...prev, addressLine1: e.target.value}))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="address2">Address Line 2 (Optional)</Label>
+                  <Input 
+                    id="address2"
+                    placeholder="Landmark, area, etc."
+                    value={formData.addressLine2}
+                    onChange={(e) => setFormData(prev => ({...prev, addressLine2: e.target.value}))}
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Description - Moved below media upload */}
+            {/* Description - Enhanced with AI auto-generation */}
             <div>
               <Label htmlFor="description">Detailed Description *</Label>
               <Textarea 
-                placeholder="Describe the issue in detail..."
+                placeholder={isAnalyzing ? "AI is analyzing your image..." : "Describe the issue in detail or let AI analyze your uploaded image..."}
                 rows={4}
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({...prev, description: e.target.value}))}
+                disabled={isAnalyzing}
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                📱 Tip: Upload an image first for AI-powered description generation
+              </p>
             </div>
 
             <Button 
