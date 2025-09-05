@@ -173,36 +173,16 @@ const AuthLogin = ({ onBack, onSuccess, onNavigateToSignup }: AuthLoginProps) =>
         return
       }
 
-      // Regular citizen login
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('username', username)
-        .single()
+      // Regular citizen login using secure function
+      const { data: citizenRole } = await supabase.rpc('login_citizen', {
+        p_username: username,
+        p_password: password
+      })
 
-      if (error || !profile) {
+      if (!citizenRole) {
         toast({
           title: "Error",
           description: "Invalid username or password",
-          variant: "destructive"
-        })
-        return
-      }
-
-      // Simple password check (in production use bcrypt or similar)
-      if (profile.password_hash !== password) {
-        toast({
-          title: "Error",
-          description: "Invalid username or password",
-          variant: "destructive"
-        })
-        return
-      }
-
-      if (!profile.is_active) {
-        toast({
-          title: "Account Inactive",
-          description: "Your account has been deactivated. Please contact support.",
           variant: "destructive"
         })
         return
@@ -212,7 +192,7 @@ const AuthLogin = ({ onBack, onSuccess, onNavigateToSignup }: AuthLoginProps) =>
         title: "Login Successful",
         description: "Welcome back!",
       })
-      onSuccess(profile.role)
+      onSuccess(citizenRole)
     } catch (error) {
       console.error('Error logging in:', error)
       toast({

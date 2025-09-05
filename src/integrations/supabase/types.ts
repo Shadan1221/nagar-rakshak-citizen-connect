@@ -328,15 +328,23 @@ export type Database = {
       create_citizen_account: {
         Args: { p_password: string; p_phone: string }
         Returns: {
-          user_id: string
+          id: string
           username: string
         }[]
       }
-      generate_unique_username: {
+      generate_complaint_code: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      generate_unique_username: {
+        Args: Record<PropertyKey, never> | { prefix?: string; tries?: number }
+        Returns: string
+      }
       login_admin: {
+        Args: { p_password: string; p_username: string }
+        Returns: string
+      }
+      login_citizen: {
         Args: { p_password: string; p_username: string }
         Returns: string
       }
