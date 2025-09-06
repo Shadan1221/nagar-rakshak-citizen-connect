@@ -212,7 +212,12 @@ const ComplaintRegistration = ({ onBack }: ComplaintRegistrationProps) => {
             {
               "parts": [
                 {
-                  "text": `You are an AI assistant specialized in analyzing civic issues from images. Analyze this ${formData.issueType || 'civic'} issue and provide a detailed 2-3 line description of the problem visible in the image, focusing on civic/municipal issues like roads, electricity, water, sanitation, etc. Image URL: ${publicUrl}`
+                  "text": `You are an AI assistant analyzing civic issues from uploaded media. Based on the image, generate a 2-3 line description covering:
+1. Severity of the problem (High/Medium/Low)
+2. Genuineness assessment
+Keep it concise and professional for a civic complaint system.
+
+Analyze this ${formData.issueType || 'civic'} issue: Image URL: ${publicUrl}`
                 }
               ]
             }
