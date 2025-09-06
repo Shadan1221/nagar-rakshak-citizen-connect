@@ -52,10 +52,10 @@ const ComplaintRegistration = ({ onBack }: ComplaintRegistrationProps) => {
   }
 
   const handleSubmit = async () => {
-    if (!formData.state || !formData.city || !formData.issueType || !formData.description) {
+    if (!formData.state || !formData.city || !formData.issueType || !formData.description || !formData.media) {
       toast({
         title: "Missing Information",
-        description: "Please fill all required fields",
+        description: "Please fill all required fields including photo/video",
         variant: "destructive"
       })
       return
@@ -200,25 +200,53 @@ const ComplaintRegistration = ({ onBack }: ComplaintRegistrationProps) => {
         .from('complaints')
         .getPublicUrl(fileName)
 
-      // Call AI analysis function
-      const { data: analysisResult, error: analysisError } = await supabase.functions.invoke('analyze-media', {
-        body: { 
-          mediaUrl: publicUrl,
-          issueType: formData.issueType 
-        }
+      // Call OpenRouter AI analysis
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer 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",
+          "HTTP-Referer": "https://nagarrakshak.com",
+          "X-Title": "Nagar Rakshak",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          "model": "openai/gpt-4o-mini",
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are an AI assistant specialized in analyzing civic issues from images. Provide a detailed 2-3 line description of the problem visible in the image, focusing on civic/municipal issues like roads, electricity, water, sanitation, etc."
+            },
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": `Analyze this image for civic issues. Issue type: ${formData.issueType || 'General civic issue'}. Provide a detailed 2-3 line description of what you observe.`
+                },
+                {
+                  "type": "image_url",
+                  "image_url": {
+                    "url": publicUrl
+                  }
+                }
+              ]
+            }
+          ]
+        })
       })
 
-      if (analysisError) throw analysisError
+      const analysisResult = await response.json()
 
-      if (analysisResult.success && analysisResult.description) {
+      if (analysisResult.choices && analysisResult.choices[0]?.message?.content) {
+        const description = analysisResult.choices[0].message.content.trim()
         setFormData(prev => ({ 
           ...prev, 
-          description: analysisResult.description 
+          description: description 
         }))
         
         toast({
           title: "AI Analysis Complete",
-          description: "Description auto-generated from image",
+          description: "Detailed description auto-generated from image",
           variant: "default"
         })
       }
@@ -231,7 +259,7 @@ const ComplaintRegistration = ({ onBack }: ComplaintRegistrationProps) => {
     } catch (error) {
       console.error('AI analysis error:', error)
       toast({
-        title: "AI Analysis Failed",
+        title: "AI Analysis Failed", 
         description: "Please enter description manually",
         variant: "destructive"
       })
@@ -394,7 +422,7 @@ const ComplaintRegistration = ({ onBack }: ComplaintRegistrationProps) => {
 
             {/* Media Upload - Enhanced with GPS and Address */}
             <div>
-              <Label>Upload Photo/Video (Optional)</Label>
+              <Label>Upload Photo/Video *</Label>
               <div className="border-2 border-dashed border-civic-saffron/30 rounded-lg p-4 text-center hover:border-civic-saffron/50 transition-colors">
                 <input
                   type="file"
