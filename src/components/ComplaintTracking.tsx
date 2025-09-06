@@ -211,6 +211,13 @@ const ComplaintTracking = ({ onBack }: ComplaintTrackingProps) => {
                   <p className="text-xs text-muted-foreground">
                     Submitted: {new Date(complaint.created_at).toLocaleDateString()}
                   </p>
+                  {complaint.assigned_department && (
+                    <div className="mt-2 pt-2 border-t border-civic-saffron/20">
+                      <p className="text-xs font-medium text-civic-saffron">
+                        📋 Responsible Authority: {complaint.assigned_department}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

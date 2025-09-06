@@ -82,6 +82,13 @@ const ComplaintRegistration = ({ onBack }: ComplaintRegistrationProps) => {
         mediaUrl = publicUrl
       }
 
+      // Get authority mapping for the issue type
+      const { data: authorityMapping } = await supabase
+        .from('issue_authority_mapping')
+        .select('authority_name')
+        .eq('issue_type', formData.issueType)
+        .single()
+
       // Auto-assign worker based on issue type
       const { data: assignedWorkerId } = await supabase
         .rpc('auto_assign_worker', { issue_type_param: formData.issueType })
@@ -100,6 +107,7 @@ const ComplaintRegistration = ({ onBack }: ComplaintRegistrationProps) => {
           gps_longitude: formData.gpsLocation?.lng,
           address_line1: formData.addressLine1,
           address_line2: formData.addressLine2,
+          assigned_department: authorityMapping?.authority_name || 'General Administration',
           status: assignedWorkerId ? 'In-Progress' : 'Registered',
           assigned_to: assignedWorkerId
         } as any)

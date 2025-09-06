@@ -86,6 +86,7 @@ export type Database = {
         Row: {
           address_line1: string | null
           address_line2: string | null
+          assigned_department: string | null
           assigned_to: string | null
           city: string | null
           complaint_code: string
@@ -110,6 +111,7 @@ export type Database = {
         Insert: {
           address_line1?: string | null
           address_line2?: string | null
+          assigned_department?: string | null
           assigned_to?: string | null
           city?: string | null
           complaint_code: string
@@ -134,6 +136,7 @@ export type Database = {
         Update: {
           address_line1?: string | null
           address_line2?: string | null
+          assigned_department?: string | null
           assigned_to?: string | null
           city?: string | null
           complaint_code?: string
@@ -196,6 +199,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      issue_authority_mapping: {
+        Row: {
+          authority_name: string
+          created_at: string
+          id: string
+          issue_type: string
+          updated_at: string
+        }
+        Insert: {
+          authority_name: string
+          created_at?: string
+          id?: string
+          issue_type: string
+          updated_at?: string
+        }
+        Update: {
+          authority_name?: string
+          created_at?: string
+          id?: string
+          issue_type?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       otp_verifications: {
         Row: {
