@@ -200,34 +200,19 @@ const ComplaintRegistration = ({ onBack }: ComplaintRegistrationProps) => {
         .from('complaints')
         .getPublicUrl(fileName)
 
-      // Call OpenRouter AI analysis
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      // Call Google Gemini AI analysis
+      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent", {
         method: "POST",
         headers: {
-          "Authorization": "Bearer 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",
-          "HTTP-Referer": "https://nagarrakshak.com",
-          "X-Title": "Nagar Rakshak",
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "X-goog-api-key": "AIzaSyBM2YyLrVnvFWTJIqgpLyE5vKAK-g-GPXk"
         },
         body: JSON.stringify({
-          "model": "openai/gpt-4o-mini",
-          "messages": [
+          "contents": [
             {
-              "role": "system",
-              "content": "You are an AI assistant specialized in analyzing civic issues from images. Provide a detailed 2-3 line description of the problem visible in the image, focusing on civic/municipal issues like roads, electricity, water, sanitation, etc."
-            },
-            {
-              "role": "user",
-              "content": [
+              "parts": [
                 {
-                  "type": "text",
-                  "text": `Analyze this image for civic issues. Issue type: ${formData.issueType || 'General civic issue'}. Provide a detailed 2-3 line description of what you observe.`
-                },
-                {
-                  "type": "image_url",
-                  "image_url": {
-                    "url": publicUrl
-                  }
+                  "text": `You are an AI assistant specialized in analyzing civic issues from images. Analyze this ${formData.issueType || 'civic'} issue and provide a detailed 2-3 line description of the problem visible in the image, focusing on civic/municipal issues like roads, electricity, water, sanitation, etc. Image URL: ${publicUrl}`
                 }
               ]
             }
@@ -237,8 +222,8 @@ const ComplaintRegistration = ({ onBack }: ComplaintRegistrationProps) => {
 
       const analysisResult = await response.json()
 
-      if (analysisResult.choices && analysisResult.choices[0]?.message?.content) {
-        const description = analysisResult.choices[0].message.content.trim()
+      if (analysisResult.candidates && analysisResult.candidates[0]?.content?.parts?.[0]?.text) {
+        const description = analysisResult.candidates[0].content.parts[0].text.trim()
         setFormData(prev => ({ 
           ...prev, 
           description: description 
