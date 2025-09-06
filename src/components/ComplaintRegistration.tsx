@@ -212,12 +212,22 @@ const ComplaintRegistration = ({ onBack }: ComplaintRegistrationProps) => {
             {
               "parts": [
                 {
-                  "text": `You are an AI assistant analyzing civic issues from uploaded media. Based on the image, generate a 2-3 line description covering:
-1. Severity of the problem (High/Medium/Low)
-2. Genuineness assessment
-Keep it concise and professional for a civic complaint system.
+                  "text": `You are an AI assistant analyzing civic issues from uploaded images. 
 
-Analyze this ${formData.issueType || 'civic'} issue: Image URL: ${publicUrl}`
+First, carefully analyze the image to identify what civic issue is shown.
+
+Then, verify if the image matches the selected issue type: "${formData.issueType || 'General'}"
+
+If the image MATCHES the issue type:
+- Provide a 2-3 line description covering:
+  1. What you see in the image
+  2. Severity of the problem (High/Medium/Low) 
+  3. Genuineness assessment
+
+If the image does NOT match the issue type:
+- Respond with: "The uploaded image does not match the selected issue type. Please upload an image related to ${formData.issueType || 'the selected issue'} or change the issue type."
+
+Image URL: ${publicUrl}`
                 }
               ]
             }
