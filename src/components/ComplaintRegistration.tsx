@@ -212,20 +212,28 @@ const ComplaintRegistration = ({ onBack }: ComplaintRegistrationProps) => {
             {
               "parts": [
                 {
-                  "text": `You are an AI assistant analyzing civic issues from uploaded images. 
+                  "text": `You are an AI assistant analyzing civic issues from uploaded images.
 
-First, carefully analyze the image to identify what civic issue is shown.
+Perform two steps:
+1) Identify the most likely civic issue(s) depicted.
+2) Compare with the selected issue type: "${formData.issueType || 'General'}". Treat semantically similar or closely related cases as a MATCH. Examples of close matches:
+- Garbage Collection ≈ waste dumping, overflowing bins, roadside litter, landfill heaps
+- Road Repair ≈ potholes, broken/damaged roads, cracks, uneven surfaces
+- Street Light ≈ broken poles, non-functioning lamps, dark streets at night
+- Water Supply ≈ leaking pipelines, burst mains, dry taps, waterlogging near supply lines
+- Electricity ≈ exposed wires, fallen/broken poles, open junction boxes
+- Public Transport ≈ bus stops, buses, crowding at stops, damaged shelters
+- Noise Pollution ≈ loudspeakers, honking congestion, construction noise
+Only return a mismatch if the image is clearly unrelated to the selected issue.
 
-Then, verify if the image matches the selected issue type: "${formData.issueType || 'General'}"
+If MATCH:
+Return a concise 2-3 line description that:
+- States what is visible in the image
+- Rates severity as High/Medium/Low with a short reason
+- Assesses genuineness (e.g., likely genuine based on visible evidence)
 
-If the image MATCHES the issue type:
-- Provide a 2-3 line description covering:
-  1. What you see in the image
-  2. Severity of the problem (High/Medium/Low) 
-  3. Genuineness assessment
-
-If the image does NOT match the issue type:
-- Respond with: "The uploaded image does not match the selected issue type. Please upload an image related to ${formData.issueType || 'the selected issue'} or change the issue type."
+If NOT MATCH:
+Respond exactly: "The uploaded image does not match the selected issue type. Please upload an image related to ${formData.issueType || 'the selected issue'} or change the issue type."
 
 Image URL: ${publicUrl}`
                 }
