@@ -72,6 +72,9 @@ const Index = () => {
       case 'admin':
         return <AdminPortal onBack={handleBack} />
       
+      case 'admin-login':
+        return <AdminPortal onBack={handleBack} />
+      
       default:
         return <SplashScreen onNavigate={handleNavigation} />
     }
